@@ -1,6 +1,7 @@
 
 from django.shortcuts import render, redirect, get_object_or_404, reverse
-from .models import Movie, Review
+#from .models import Movie, Review
+from .models import Review
 from .forms import CreateReviewForm, CreateUserForm
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
@@ -37,7 +38,11 @@ def format_stars(num):
 
 def movies(request):
     #all_movies = Movie.objects.all()
-    all_movies = Movie.objects.raw('SELECT * FROM mcu_site_movie')
+    #all_movies = Movie.objects.raw('SELECT * FROM mcu_site_movie')
+    with connection.cursor() as cursor:
+        cursor.execute('SELECT * FROM mcu_site_movie')
+        columns = cursor.description
+        all_movies= [{columns[index][0]:column for index, column in enumerate(value)} for value in cursor.fetchall()]
     context = {
         'movies': all_movies,
         'stars': format_stars(4.5)
@@ -54,12 +59,12 @@ def reviews(request, m_id=None):
         }
     else:
         movie_reviews = Review.objects.raw('SELECT * FROM mcu_site_review WHERE title_id=%s', [m_id])
-        movie = Movie.objects.raw('SELECT id, title, year FROM mcu_site_movie WHERE id=%s LIMIT 1', [m_id])[0] 
-        #with connection.cursor() as cursor:
-        #    cursor.execute('SELECT title, year FROM mcu_site_movie WHERE id=%s LIMIT 1', [m_id])
-        #    movie = cursor.fetchone() #returns a tuple of the title, year
-        #    movie_title = movie[0]
-        #    movie_year = movie[1]
+        #movie = Movie.objects.raw('SELECT id, title, year FROM mcu_site_movie WHERE id=%s LIMIT 1', [m_id])[0] 
+        with connection.cursor() as cursor:
+            cursor.execute('SELECT id, title, year FROM mcu_site_movie WHERE id=%s LIMIT 1', [m_id])
+            columns = cursor.description
+            movie = [{columns[index][0]:column for index, column in enumerate(value)} for value in cursor.fetchall()]
+            movie = movie[0]
         context = {
             'reviews': movie_reviews,
             'movie': movie,
@@ -71,10 +76,23 @@ def submit_review(request, m_id=None):
     #results = Movie.objects.all()
     movie = None
     if m_id is not None:
-        movie = Movie.objects.raw('SELECT * FROM mcu_site_movie WHERE id=%s', [m_id])[0]
-        results = Movie.objects.raw('SELECT * FROM mcu_site_movie WHERE NOT id=%s', [m_id])
+        #movie = Movie.objects.raw('SELECT * FROM mcu_site_movie WHERE id=%s', [m_id])[0]
+        #results = Movie.objects.raw('SELECT * FROM mcu_site_movie WHERE NOT id=%s', [m_id])
+        with connection.cursor() as cursor:
+            cursor.execute('SELECT * FROM mcu_site_movie WHERE id=%s', [m_id])
+            columns = cursor.description
+            movie = [{columns[index][0]:column for index, column in enumerate(value)} for value in cursor.fetchall()]
+            movie = movie[0]
+
+            cursor.execute('SELECT * FROM mcu_site_movie WHERE NOT id=%s', [m_id])
+            columns = cursor.description
+            results = [{columns[index][0]:column for index, column in enumerate(value)} for value in cursor.fetchall()]
     else:
-        results = Movie.objects.raw('SELECT * FROM mcu_site_movie')
+        #results = Movie.objects.raw('SELECT * FROM mcu_site_movie')
+        with connection.cursor() as cursor:
+            cursor.execute('SELECT * FROM mcu_site_movie')
+            columns = cursor.description
+            results = [{columns[index][0]:column for index, column in enumerate(value)} for value in cursor.fetchall()]
     #context = {'error': ''}
     if request.method == "POST":
 
