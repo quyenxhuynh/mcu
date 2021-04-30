@@ -36,12 +36,22 @@ def format_stars(num):
     return lst
 
 #added to work on fixing stars
-all_movies = Movie.objects.raw('SELECT * FROM mcu_site_movie')
+#all_movies = Movie.objects.raw('SELECT * FROM mcu_site_movie')
 
 def calculate_stars(mvs):
+    all_reviews = Review.objects.raw('SELECT * FROM mcu_site_review')
     star_list=[]
     for movi in mvs:
-        star_list.append(format_stars(4.0))
+        for rev in all_reviews:
+            if movi['id']==rev.title_id:
+                temp+=rev.stars
+                counter+=1
+        if counter!=0:
+            star_list.append(format_stars(temp/counter))
+        else:
+            star_list.append(format_stars(0))
+        temp=0
+        counter=0
     return star_list 
     #all_reviews = Review.objects.raw('SELECT * FROM mcu_site_review WHERE title_id=%s', [m_id])
 
@@ -52,6 +62,8 @@ def movies(request):
         cursor.execute('SELECT * FROM mcu_site_movie')
         columns = cursor.description
         all_movies= [{columns[index][0]:column for index, column in enumerate(value)} for value in cursor.fetchall()]
+    zipstuff=zip(all_movies,calculate_stars(all_movies))
+    
     context = {
         'movies': all_movies,
         'stars': format_stars(4.5) #calculate_stars(all_movies) 
@@ -74,6 +86,7 @@ def reviews(request, m_id=None):
             columns = cursor.description
             movie = [{columns[index][0]:column for index, column in enumerate(value)} for value in cursor.fetchall()]
             movie = movie[0]
+        zipstuff=zip(movie_reviews,stars_reviews(movie_reviews))
         context = {
             'reviews': movie_reviews,
             'movie': movie,
